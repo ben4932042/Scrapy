@@ -1,0 +1,8 @@
+lxml
+requests
+bs4
+pandas
+scrapy
+numpy
+python-dotenv
+
