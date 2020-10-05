@@ -1,27 +1,31 @@
+"""
+scrapy the free proxy
+"""
+import json
 import scrapy
 from bs4 import BeautifulSoup
-import json
+
 
 class ProxyExampleSpider(scrapy.Spider):
+    """Proxy Generator"""
     name = 'proxy_example'
     allowed_domains = ['www.us-proxy.org']
     start_urls = ['http://www.us-proxy.org/']
 
     def parse(self, response):
+        """main function"""
         soup = BeautifulSoup(response.text, 'lxml')
         trs = soup.select("#proxylisttable tr")
-        for tr in trs:
-            tds = tr.select("td")
+        for tr_ in trs:
+            tds = tr_.select("td")
             if len(tds) > 6:
-                ip = tds[0].text
+                ip_ = tds[0].text
                 port = tds[1].text
-                anonymity = tds[4].text
-                ifScheme = tds[6].text
-                if ifScheme == 'yes': 
+                if_scheme = tds[6].text
+                if if_scheme == 'yes':
                     scheme = 'https'
                 else: scheme = 'http'
-                proxy = "%s://%s:%s"%(scheme, ip, port)
-
+                proxy = "%s://%s:%s"%(scheme, ip_, port)
 
                 meta = {
                     'port': port,
@@ -29,17 +33,18 @@ class ProxyExampleSpider(scrapy.Spider):
                     'dont_retry': True,
                     'download_timeout': 3,
                     '_proxy_scheme': scheme,
-                    '_proxy_ip': ip
+                    '_proxy_ip': ip_
                         }
-                print(meta)
+
                 yield scrapy.Request(
-                            'https://httpbin.org/ip', 
-                            callback=self.proxy_check_available, 
-                            meta=meta, 
+                            'https://httpbin.org/ip',
+                            callback=self.proxy_check_available,
+                            meta=meta,
                             dont_filter=True,
                             )
 
     def proxy_check_available(self, response):
+        """ check proxy functionable"""
         proxy_ip = response.meta['_proxy_ip']
         if proxy_ip == json.loads(response.text)['origin']:
             yield {
@@ -47,4 +52,3 @@ class ProxyExampleSpider(scrapy.Spider):
                 'proxy': response.meta['proxy'],
                 'port': response.meta['port']
             }
-
