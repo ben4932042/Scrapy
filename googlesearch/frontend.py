@@ -16,15 +16,13 @@ ua = UserAgent()
 i=int(sys.argv[1])
 df_raw = pd.read_csv(os.getenv("SEARCHWORDLIST_LOACL_PATH")+'/raw.csv')
 index_start = i - 2
-A = [
+raws_to_df = [
         [df_raw.iloc[x][0],df_raw.iloc[x][1],df_raw.iloc[x][2],df_raw.iloc[x][2]+'+推薦']
         for x in range(index_start,len(df_raw))
     ]
-for a in A:
+for raw_data in raws_to_df:
     try:
-        #os.stdout(a[3])
         time.sleep(random.randint(1,5))
-        raw_data = a
         Matrix = []
         search_data_list = raw_data.copy()
         headers = {
@@ -48,7 +46,7 @@ for a in A:
             search_data_list = search_data_list + [each_title,each_url]
         URL_NEXT = 'https://www.google.com/search?q={}&gws_rd=ssl&start=10'\
                                                         .format(search_data_list[3])
-        #time.sleep(random.randint(5,10))
+        time.sleep(random.randint(5,10))
         user_agent = ua.firefox
         headers = {'User-Agent': user_agent}
         response = requests.get(url = URL_NEXT, headers=headers)
@@ -72,7 +70,7 @@ for a in A:
                 search_data_list[3] = command_word
                 URL = 'https://www.google.com/search?q={}&gws_rd=ssl'.format(search_data_list[3])
                 response = requests.get(url = URL, headers=headers)
-                user_agent = random.choice(headerlist)
+                user_agent = ua.firefox
                 headers = {'User-Agent': user_agent}
                 if str(response) == '<Response [429]>':
                     raise NameError('Too fast')
@@ -85,8 +83,8 @@ for a in A:
                     search_data_list = search_data_list + [each_title,each_url]
                 URL_NEXT = 'https://www.google.com/search?q={}&gws_rd=ssl&start=10'\
                                                                     .format(search_data_list[3])
-                #time.sleep(random.randint(5,10))
-                user_agent = random.choice(headerlist)
+                time.sleep(random.randint(1,5))
+                user_agent = ua.firefox
                 headers = {'User-Agent': user_agent}
                 response = requests.get(url = URL_NEXT,headers=headers)
                 if str(response) == '<Response [429]>':
@@ -107,5 +105,5 @@ for a in A:
                             )
         i +=1
     except NameError as error_:
-        #os.stderr('{}-{}'.format(i,error_))
+        os.stderr('{}-{}'.format(i,error_))
         break
