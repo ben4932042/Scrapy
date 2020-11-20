@@ -3,3 +3,6 @@ __pycache__
 .env
 raw.csv
 .DS_Store
+*.ipynb
+*.egg-info/
+venv/
