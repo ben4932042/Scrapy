@@ -1,16 +1,14 @@
 import time
 import random
 import pandas as pd
-import datetime
 import os
 import sys
-import logging
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv,find_dotenv
 from fake_useragent import UserAgent
-from dependencies import mkdir_force
 from retry import retry
+import logging
 load_dotenv(find_dotenv())
 
 class GoogleSearch:
@@ -28,7 +26,6 @@ class GoogleSearch:
                         'Range': 'bytes=0-',
                         'Accept-Language': 'zh-TW,zh;q=0.8,en-US;q=0.5,en;q=0.3',
                         }
-
     def get_url(self):
         """
         get two page in google search
@@ -71,16 +68,20 @@ class GoogleSearch:
         """
         if self.PROXY:
             proxy = self._get_proxy().get("proxy")
+            print(proxy)
             response = requests.get(
                         url = url,
                         headers=self.headers,
                         proxies={"http": "http://{}".format(proxy)},
                         )
+            if response.status_code != 200:
+                self._delete_proxy(proxy)
+                raise Exception('Proxy IP {} failed!'.format(proxy))
+
         else:
             response = requests.get(url = url, headers=self.headers)
         if response.status_code != 200:
-            self._delete_proxy(proxy)
-            raise NameError('Too fast ip: {}'.format(proxy))
+            raise Exception('Get wrong response from google')
         soup = BeautifulSoup(response.text,'lxml')
         return soup
     
@@ -97,9 +98,13 @@ class GoogleSearch:
         delete dead proxy IP
         """
         requests.get("http://127.0.0.1:5010/delete/?proxy={}".format(proxy))
+
+def mkdir_force(destination_path: str):
+    if not os.path.exists(destination_path):
+        os.makedirs(destination_path, exist_ok=True)
         
-@retry(tries=-1, delay=5, backoff=0, jitter=(1,15))
-def main(search_data_list: list, execute_date: str):
+@retry(delay=5)
+def main(search_data_list):
     RESULT_ARRAY = []
     search_word_index = search_data_list[0]
     search_data_list = search_data_list[1:]
@@ -128,29 +133,44 @@ def main(search_data_list: list, execute_date: str):
         pass
 
     pd.DataFrame(RESULT_ARRAY).to_csv(
-                            f"{GOOGLE_LOCAL_PATH}/url/202011/{TAG_NAME}/{search_word_index}.csv",
+                            '{}/url/202011/{}/{}.csv'.format(GOOGLE_LOACL_PATH,TAG_NAME, search_word_index),
                             index=None,
                             )
-    finally:
-        del RESULT_ARRAY
-    else:
-        print('{}: {}'.format(search_word_index, search_word))
- 
+    del RESULT_ARRAY
+    print('{}: {}'.format(search_word_index, search_word))
+
+TAG_NAME_LIST = [
+    #'3C',
+    #'beauty',
+    'aestheticMedicine',
+    'apparel',
+    'building',
+    'clock',
+    'education',
+    'entertainment',
+    'finance',
+    'food',
+    'homeAppliances',
+    'leisureTravel',
+    'personalItems',
+    'shopping',
+    'stationery',
+    'supplies',
+    'telecommunications',
+    'tobaccoAndAlcohol',
+    'transportation',
+]
+    
 if __name__ == "__main__":
     logging.basicConfig()
     GOOGLE_LOACL_PATH = os.getenv('GOOGLE_LOCAL_PATH')
-    TAG_NAME = sys.argv[1]
-    print(TAG_NAME)
-    print('='*10)
-    MONTH = datetime.datetime.now().strftime('%Y%m')
-    CSV_PATH = f'{GOOGLE_LOCAL_PATH}/raw/{MONTH}/{TAG_NAME}.csv'
-    mkdir_force(f'{GOOGLE_LOCAL_PATH}/url/{MONTH}/{TAG_NAME}'
-    df = pd.read_csv(CSV_PATH)
-    df = df[['第一層','第二層','第三層']]
-    df = df.reset_index(drop=False)
-    df['search_word'] =df['第三層'] + '+推薦'
-    
-    search_word_array = df.to_numpy().tolist()
-    for search_data_list in search_word_array:
-        main(search_data_list=search_data_list,execute_date=MONTH)
+    for TAG_NAME in TAG_NAME_LIST:
+        print(TAG_NAME)
+        print('=====================')
+        CSV_PATH = '{}/raw/202011/{}.csv'.format(GOOGLE_LOACL_PATH, TAG_NAME)
+        mkdir_force('{}/url/202011/{}'.format(GOOGLE_LOACL_PATH,TAG_NAME))
+        df = pd.read_csv(CSV_PATH)
+        search_word_array = df.to_numpy().tolist()
+        for search_data_list in search_word_array:
+            main(search_data_list=search_data_list)
     

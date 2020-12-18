@@ -15,14 +15,13 @@ import pandas as pd
 import numpy as np
 import glob
 import re
+import logging
 from retry import retry
 from fake_useragent import UserAgent
 from dependencies.customization_google_search import Customization
+from dependencies import mkdir_force
 load_dotenv(find_dotenv())
 
-def mkdir_force(destination_path: str):
-    if not os.path.exists(destination_path):
-        os.makedirs(destination_path, exist_ok = True)
 
 def judge_skip_word(target:str,skip_word_list:list):
     tmp_list = [target.count(skip) for skip in skip_word_list]
@@ -40,30 +39,18 @@ def get_hash256(url: str):
 def replace_word(word: str):
     return re.sub(' |\t|\r|\n|\u3000|\xa0|<br>|<br/>', '。', word)
 
-@retry(delay=3)
-def save_tsv_gz_file_by_appending_method(path: str, file_name: str, data_filed_header: list, data_filed_dict: dict):
-
-    with gzip.open(path + file_name, "at", newline="") as filetype:
-        wcsv = csv.DictWriter(
-            filetype,
-            data_filed_header,
-            delimiter = "\t",
-        )
-        wcsv.writerow(data_filed_dict)
-
-
 class GooglesearchSpider(scrapy.Spider):
     name = 'googlesearch_each'
     custom_settings = {
-        "CONCURRENT_REQUESTS" : 10,
-        "CONCURRENT_REQUESTS_PER_DOMAIN" : 5,
+        #"CONCURRENT_REQUESTS" : 10,
+        #"CONCURRENT_REQUESTS_PER_DOMAIN" : 5,
         "DOWNLOAD_FAIL_ON_DATALOSS" : False,
         }
-    download_delay = 3
-    category_tag = '3C'
+    download_delay = 6
+    category_tag = 'tobaccoAndAlcohol'
     start_urls = ['https://www.google.com/']
     skip_url_list = ['www.youtube.com','www.bilibili.com']
-    skip_word_list = []
+    skip_word_list = ['焦點新聞','相關搜尋','搜尋結果','建議搜尋篩選器','影片']
     customize_domain = [
                 'shopee.tw',
                 'feebee.com.tw',
@@ -80,31 +67,14 @@ class GooglesearchSpider(scrapy.Spider):
                 'kknews.cc',
                 'www.buy123.com.tw',
                 'www.rakuten.com.tw',
-                'www.return.com.tw',
+                'ruten.com.tw',
                 'tw.buy.yahoo.com',
                 'tw.bid.yahoo.com',
                 'tw.mall.yahoo.com',
                 'pixnet.net',
                 ]
 
-    data_filed = [
-            "_id",
-            'source',
-            'tag_layer1',
-            'tag_layer2',
-            'tag_layer3',
-            'searchWord',
-            "url",
-            "title",
-            "text",
-            "createtime",
-            ]
-
-    local_path = os.getenv("GOOGLE_LOCAL_PATH")+'/result/{}/'.format(datetime.datetime.now().strftime('%Y%m'))
-    mkdir_force(local_path)
-
-    def parse(self, response):
-
+    def start_requests(self):
         ua = UserAgent()
         GOOGLE_LOCAL_PATH = os.getenv("GOOGLE_LOCAL_PATH")
         MONTH = datetime.datetime.now().strftime('%Y%m')
@@ -115,12 +85,15 @@ class GooglesearchSpider(scrapy.Spider):
                                                                             category = {},
                                                                             )
 
+        
         google_search_url_path_each_tag = google_search_url_path.format(self.category_tag)
         file_name_list = glob.glob('{}/*.csv'.format(google_search_url_path_each_tag))
-        
         for file_name in file_name_list:
-            df = pd.read_csv(file_name)
-            contents_array = df.to_numpy().tolist()
+            search_word_index = int(file_name.split('/')[-1][:-4])
+            self.logger.info("start to crawl index {}".format(search_word_index))
+            tmp_df = pd.read_csv(file_name)
+            contents_array = tmp_df.to_numpy().tolist()
+            del df_tmp
             content_list_list = []
             for content_list in contents_array:
                 content_tmp_list = [
@@ -128,9 +101,7 @@ class GooglesearchSpider(scrapy.Spider):
                     for i in range(4,len(content_list))
                     ]
                 content_list_list += content_tmp_list
-
             del contents_array
-            
             for content_list in content_list_list:
                 content_search_word = content_list[3]
                 content_url = content_list[4]
@@ -144,59 +115,37 @@ class GooglesearchSpider(scrapy.Spider):
                 elif judge_skip_word(target=content_search_word, skip_word_list =self.skip_word_list) > 0:
                     continue
                 else:
+                    search_url = content_list[4]
+                    category_tag_name = self.category_tag
+                    ua = UserAgent()
                     headers = {'user-agent': ua.random}
-                    yield scrapy.Request(
-                                        content_url, 
+                    try:
+                        domain = re.search("//[a-z|A-Z|0-9|\.]+/", search_url).group().split('/')[2]
+                    except Exception:
+                        domain = ''
+                        
+                    if domain in self.customize_domain:
+                        del domain
+                        yield scrapy.Request(
+                                        search_url, 
                                         meta={'attribute': content_list},
-                                        callback=self.each_parse,
+                                        callback=self.customized_parse,
                                         dont_filter=True,
                                         headers=headers,
-                                        )                    
-
-    def each_parse(self, response):
-        target_list = response.meta['attribute']  
-        search_url = target_list[4]
-        category_tag_name = self.category_tag
-
-        ua = UserAgent()
-        headers = {'user-agent': ua.random}
-
-        try:
-            domain = re.search("//[a-z|A-Z|0-9|\.|-]+/", search_url).group().split('/')[2]
-        except AttributeError:
-            del domain
-            yield scrapy.Request(
-                            search_url, 
-                            meta={'attribute': target_list},
-                            callback=self.extract_parse,
-                            dont_filter=True,
-                            headers=headers,
-                            )
-            
-        if domain in self.customize_domain:
-            del domain
-            yield scrapy.Request(
-                            search_url, 
-                            meta={'attribute': target_list},
-                            callback=self.customized_parse,
-                            dont_filter=True,
-                            headers=headers,
-                            )
-                
-        else:
-            del domain
-            yield scrapy.Request(
-                            search_url, 
-                            meta={'attribute': target_list},
-                            callback=self.extract_parse,
-                            dont_filter=True,
-                            headers=headers,
-                            )
-
+                                        )
+                            
+                    else:
+                        del domain
+                        yield scrapy.Request(
+                                        search_url, 
+                                        meta={'attribute': content_list},
+                                        callback=self.extract_parse,
+                                        dont_filter=True,
+                                        headers=headers,
+                                        )
+            os.remove(file_name)    
+    
     def extract_parse(self, response):
-        """
-        run AI Lab module
-        """
         item = GoogleSearchItem()
         target_list = response.meta['attribute']  
         item['source'] = 'googlesearch'
@@ -207,7 +156,8 @@ class GooglesearchSpider(scrapy.Spider):
         item['tag_layer2'] = target_list[1]         
         item['tag_layer3'] = target_list[2]
         save_file_name = '{}_extract.tsv.gz'.format(self.category_tag)
-        
+        self.logger.info(search_word)
+
         html_str = response.text
         cus = Customization(
                         target_word=search_word,
@@ -215,11 +165,12 @@ class GooglesearchSpider(scrapy.Spider):
                         html_str=html_str,
                         )
         contents_list_list = cus.execute()
+
         try:
             if len(contents_list_list) == 0:
-                return
+                return None
         except TypeError:
-            return
+            return None
 
         for contents_list in contents_list_list:
             content_title = contents_list[0]
@@ -235,12 +186,9 @@ class GooglesearchSpider(scrapy.Spider):
             item['_id'] = content_id
             item['createtime'] = datetime.datetime.now().strftime("%Y%m%d")
 
-            save_tsv_gz_file_by_appending_method(self.local_path, save_file_name, self.data_filed , item)
+            yield item
             
     def customized_parse(self, response):
-        """
-        run DE module
-        """
         item = GoogleSearchItem()
         target_list = response.meta['attribute']  
         item['source'] = 'googlesearch'
@@ -251,7 +199,8 @@ class GooglesearchSpider(scrapy.Spider):
         item['tag_layer2'] = target_list[1]         
         item['tag_layer3'] = target_list[2]
         save_file_name = '{}_customized.tsv.gz'.format(self.category_tag)
-        
+        self.logger.info(search_word)
+
         html_str = response.text
         cus = Customization(
                         target_word=search_word,
@@ -259,18 +208,13 @@ class GooglesearchSpider(scrapy.Spider):
                         html_str=html_str,
                         )
         contents_list_list = cus.execute()
+
         try:
             if len(contents_list_list) == 0:
-                yield scrapy.Request(
-                        search_url, 
-                        meta={'attribute': target_list},
-                        callback=self.extract_parse,
-                        dont_filter=True,
-                        headers=headers,
-                        )
-
+                return None
         except TypeError:
-            raise Exception('get skip url')
+            self.logger.warning('get skip url')
+            return None
 
         for contents_list in contents_list_list:
             content_title = contents_list[0]
@@ -285,5 +229,6 @@ class GooglesearchSpider(scrapy.Spider):
             item['url'] = content_url
             item['_id'] = content_id
             item['createtime'] = datetime.datetime.now().strftime("%Y%m%d")
-            
-            save_tsv_gz_file_by_appending_method(self.local_path, save_file_name, self.data_filed , item)
+
+            yield item
+

@@ -1,4 +1,0 @@
-[
-{"scheme": "http", "proxy": "http://40.65.54.1:3128", "port": "3128"},
-{"scheme": "https", "proxy": "https://45.82.245.34:3128", "port": "3128"}
-]
