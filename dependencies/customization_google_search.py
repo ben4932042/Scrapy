@@ -15,7 +15,6 @@ from dependencies.google_search.ec.yahoo_shopping_center import yahoo_shopping_c
 from dependencies.google_search.forum.dcard import DcardCustomized
 from dependencies.google_search.forum.kknews import kknews_customized
 from dependencies.google_search.forum.pixnet import pixnet_customized
-from dependencies.py_utils.utils.ai_utils import extractTextByDensity
 
 class Customization():
     """
@@ -136,7 +135,7 @@ class Customization():
         except:
             content_title = ''
         content_url = self.url
-        content_text = extractTextByDensity().extract_by_html_str(html_str=self.html_str)
-        
+        content_text = BeautifulSoup(self.word, 'lxml').body.text
+
         return [[content_title, content_url, content_text]]
 

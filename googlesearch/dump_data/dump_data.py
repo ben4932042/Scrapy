@@ -4,6 +4,9 @@ import pymongo
 import re
 import sys
 from dependencies import save_tsv_gz_file_by_appending_method
+from dotenv import load_dotenv, find_dotenv
+load_dotenv(find_dotenv())
+
 
 def execute(url: str):
     domain = re.search("//[a-z|A-Z|0-9|\.|-]+/", url).group().split('/')[2]
@@ -20,8 +23,8 @@ def fetch_domain(domain: str):
 if __name__ == "__main__":
 
     file_name = sys.argv[1]
-    client = pymongo.MongoClient('mongodb://127.0.0.1:27017/')
-    db = client['scrapy']
+    client = pymongo.MongoClient(os.getenv("MONGO_HOST"))
+    db = client[os.getenv("MONGO_COLLECTION")]
     customize_domain = [
         'shopee.tw',
         'feebee.com.tw',
