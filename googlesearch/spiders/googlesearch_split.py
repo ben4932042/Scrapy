@@ -41,7 +41,6 @@ class GooglesearchSpider(scrapy.Spider): #pylint: disable=abstract-method
         "DOWNLOAD_FAIL_ON_DATALOSS" : False,
         }
     download_delay = 6
-    category_tag = ""
     start_urls = ['https://www.google.com/']
     skip_url_list = ['www.youtube.com', 'www.bilibili.com']
     skip_word_list = ['焦點新聞', '相關搜尋', '搜尋結果', '建議搜尋篩選器', '影片']
@@ -67,7 +66,13 @@ class GooglesearchSpider(scrapy.Spider): #pylint: disable=abstract-method
                 'tw.mall.yahoo.com',
                 'pixnet.net',
                 ]
-
+    def __init__(self, category_tag=None): #pylint: disable=super-init-not-called
+        """
+        initial setting
+        """
+        if category_tag is None:
+            raise scrapy.exceptions.CloseSpider("Lost parameter: category_tag")
+        self.category_tag = category_tag
     def start_requests(self): #pylint: disable=too-many-locals
         """
         Allocate url into each parse
