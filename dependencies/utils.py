@@ -1,3 +1,4 @@
+import re
 import os
 import gzip
 import csv
@@ -21,3 +22,19 @@ def get_hash256(url: str):
     s.update(url.encode('utf-8'))
     URLID = s.hexdigest()
     return URLID
+
+def judge_skip_word(target: str, skip_word_list: list):
+    """
+    skip user-defined key word from searched word.
+    """
+    tmp_list = [target.count(skip) for skip in skip_word_list]
+    judge_count = 0
+    for _t in tmp_list:
+        judge_count += _t
+    return judge_count
+
+def replace_word(word: str):
+    """
+    replace spark cannot handle text into 。
+    """
+    return re.sub(' |\t|\r|\n|\u3000|\xa0|<br>|<br/>', '。', word)

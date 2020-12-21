@@ -10,38 +10,17 @@ import scrapy
 from dotenv import load_dotenv, find_dotenv
 from fake_useragent import UserAgent
 from dependencies.customization_google_search import Customization
+from dependencies import judge_skip_word
+from dependencies import replace_word
 from dependencies import get_hash256
 from ..items import GoogleSearchItem
 load_dotenv(find_dotenv())
-
-def judge_skip_word(target: str, skip_word_list: list):
-    """
-    skip user-defined key word from searched word.
-    """
-    tmp_list = [target.count(skip) for skip in skip_word_list]
-    judge_count = 0
-    for _t in tmp_list:
-        judge_count += _t
-    return judge_count
-
-def replace_word(word: str):
-    """
-    replace spark cannot handle text into 。
-    """
-    return re.sub(' |\t|\r|\n|\u3000|\xa0|<br>|<br/>', '。', word)
 
 class GooglesearchSpider(scrapy.Spider): #pylint: disable=abstract-method
     """
     main class function
     """
     name = 'googlesearch_each'
-    custom_settings = {
-        #"CONCURRENT_REQUESTS" : 10,
-        #"CONCURRENT_REQUESTS_PER_DOMAIN" : 5,
-        "DOWNLOAD_FAIL_ON_DATALOSS" : False,
-        }
-    download_delay = 6
-    category_tag = ""
     start_urls = ['https://www.google.com/']
     skip_url_list = ['www.youtube.com', 'www.bilibili.com']
     skip_word_list = ['焦點新聞', '相關搜尋', '搜尋結果', '建議搜尋篩選器', '影片']
@@ -67,7 +46,13 @@ class GooglesearchSpider(scrapy.Spider): #pylint: disable=abstract-method
                 'tw.mall.yahoo.com',
                 'pixnet.net',
                 ]
-
+    def __init__(self, category_tag=None): #pylint: disable=super-init-not-called
+        """
+        initial setting
+        """
+        if category_tag is None:
+            raise scrapy.exceptions.CloseSpider("Lost parameter: category_tag")
+        self.category_tag = category_tag
     def start_requests(self): #pylint: disable=too-many-locals
         """
         Allocate url into each parse
@@ -76,6 +61,8 @@ class GooglesearchSpider(scrapy.Spider): #pylint: disable=abstract-method
         execute_month = datetime.datetime.now().strftime('%Y%m')
         google_search_url_path_each_tag = f'{local_path}/url/{execute_month}/{self.category_tag}'
         file_name_list = glob.glob(f'{google_search_url_path_each_tag}/*.csv')
+        if len(file_name_list) == 0:
+            raise scrapy.exceptions.CloseSpider("No raw url file need to crawl")
         for file_name in file_name_list:
             search_word_index = int(file_name.split('/')[-1][:-4])
             self.logger.info(f"start to crawl index {search_word_index}")
