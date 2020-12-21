@@ -1,4 +1,4 @@
-
+from .utils import get_hash256
 from .utils import mkdir_force
 from .utils import save_tsv_gz_file_by_appending_method
 from dependencies.google_search.ec.buy123 import Buy123Customized

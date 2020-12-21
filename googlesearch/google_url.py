@@ -128,7 +128,7 @@ def main(search_data_list: list, execute_date: str):
         pass
 
     pd.DataFrame(RESULT_ARRAY).to_csv(
-                            f"{GOOGLE_LOCAL_PATH}/url/202011/{TAG_NAME}/{search_word_index}.csv",
+                            f"{GOOGLE_LOCAL_PATH}/url/{TAG_NAME}/{search_word_index}.csv",
                             index=None,
                             )
     finally:
@@ -148,8 +148,7 @@ if __name__ == "__main__":
     df = pd.read_csv(CSV_PATH)
     df = df[['第一層','第二層','第三層']]
     df = df.reset_index(drop=False)
-    df['search_word'] =df['第三層'] + '+推薦'
-    
+
     search_word_array = df.to_numpy().tolist()
     for search_data_list in search_word_array:
         main(search_data_list=search_data_list,execute_date=MONTH)
