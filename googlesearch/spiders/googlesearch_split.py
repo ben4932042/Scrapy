@@ -8,7 +8,6 @@ import re
 import pandas as pd
 import scrapy
 from dotenv import load_dotenv, find_dotenv
-from fake_useragent import UserAgent
 from dependencies.customization_google_search import Customization
 from dependencies import judge_skip_word
 from dependencies import replace_word
@@ -97,8 +96,6 @@ class GooglesearchSpider(scrapy.Spider): #pylint: disable=abstract-method
                     continue
                 else:
                     search_url = content_list[4]
-                    user_agent = UserAgent()
-                    headers = {'user-agent': user_agent.random}
                     try:
                         # pylint: disable=anomalous-backslash-in-string
                         domain = re.search("//[a-z|A-Z|0-9|\.]+/", search_url).group().split('/')[2]
@@ -112,7 +109,6 @@ class GooglesearchSpider(scrapy.Spider): #pylint: disable=abstract-method
                             meta={'attribute': content_list},
                             callback=self.customized_parse,
                             dont_filter=True,
-                            headers=headers,
                             )
 
                     else:
@@ -122,7 +118,6 @@ class GooglesearchSpider(scrapy.Spider): #pylint: disable=abstract-method
                             meta={'attribute': content_list},
                             callback=self.extract_parse,
                             dont_filter=True,
-                            headers=headers,
                             )
             os.remove(file_name)
 
