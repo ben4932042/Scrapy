@@ -82,8 +82,3 @@ class RutenCustomized:
             product_list += api_list
         return product_list
 
-if __name__ == "__main__":
-    import sys
-    URL = sys.argv[1]
-    TEST = RutenCustomize(target_url=URL).execute()
-    print(TEST.__next__())
