@@ -4,7 +4,7 @@ import pymongo
 import redis
 load_dotenv(find_dotenv())
 
-class GetquotesPipeline(object):
+class GoogleSearchMongoPipeline(object):
 
     def open_spider(self, spider):
         db_name = os.getenv("MONGO_COLLECTION")
@@ -17,7 +17,9 @@ class GetquotesPipeline(object):
 
     def insert_article(self, item):
         item = dict(item)
-        self.db.google_search.insert_one(item)
+        table_name = item['source']
+        if not table_name == '':
+            self.db[table_name].insert_one(item)
 
     def close_spider(self, spider):
         self.db_client.close()

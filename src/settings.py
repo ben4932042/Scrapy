@@ -1,7 +1,7 @@
-BOT_NAME = 'googlesearch'
+BOT_NAME = 'src'
 
-SPIDER_MODULES = ['googlesearch.spiders']
-NEWSPIDER_MODULE = 'googlesearch.spiders'
+SPIDER_MODULES = ['src.spiders']
+NEWSPIDER_MODULE = 'src.spiders'
 
 RETRY_ENABLED = False
 DOWNLOAD_TIMEOUT = 5
@@ -43,8 +43,8 @@ DEFAULT_REQUEST_HEADERS = {
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
-    'googlesearch.middlewares.GooglesearchScrapyDownloaderMiddleware': None,
-    'googlesearch.middlewares.RandomUserAgentMiddleware': 500,
+    'src.middlewares.GooglesearchScrapyDownloaderMiddleware': None,
+    'src.middlewares.RandomUserAgentMiddleware': 500,
 
 }
 
@@ -59,7 +59,7 @@ RETRY_HTTP_CODES = [429]
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-'googlesearch.pipelines.GetquotesPipeline': 400,
+'src.pipelines.GoogleSearchMongoPipeline': 400,
 }
 
 
