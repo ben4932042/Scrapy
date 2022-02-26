@@ -15,7 +15,7 @@ from dependencies import get_hash256
 from ..items import GoogleSearchItem
 load_dotenv(find_dotenv())
 
-class GooglesearchSpider(scrapy.Spider): #pylint: disable=abstract-method
+class GoogleSearchSpider(scrapy.Spider): #pylint: disable=abstract-method
     """
     main class function
     """
